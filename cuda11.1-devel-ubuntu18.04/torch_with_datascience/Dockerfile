@@ -125,7 +125,10 @@ EXPOSE 9989
 
 RUN python3 -m ipykernel.kernelspec
 
-# CMD ["bash", "-c", "jupyter lab --notebook-dir=/path/to/dir --port=9989 --no-browser --allow-root"]
-# sudo docker run -it -p 9989:9989 onmybeamer_torch:0.6 /bin/bash
+# sudo docker run -it --gpus all -p 9989:9989 -v ~/catholic_prototype/:/app/repo onmybeamer_torch:0.6 /bin/bash
+# sudo docker run -it -p 9989:9989 -v ~/catholic_prototype/:/app/repo onmybeamer_torch:0.6 /bin/bash
+
+# CMD ["bash", "-c", "jupyter lab --notebook-dir=./repo/ --ip=0.0.0.0 --port=9989  --no-browser --allow-root"]
 
 # You should do port forwarding to see jupyter of docker container of remote server in your local machine!
+# Google "Xshell port forwarding" or "vscode portforwarding" (settings.json remote.SSH.defaultForwardedPorts)
