@@ -1,0 +1,21 @@
+version: '2.3'
+
+services:
+  beamer:
+    image: onmybeamer_torch:0.7
+    runtime: nvidia
+    ports:
+     - "9989:9989"
+    volumes:
+     - ~/path/to/dir/:/app/repo/
+    command: jupyter lab --notebook-dir=./repo/ --ip=0.0.0.0 --port=9989  --no-browser --allow-root
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    shm_size: '32gb'
+    # environment: # or I could do this
+    #   - NVIDIA_VISIBLE_DEVICES=0
+    tty: true
+
+# sudo docker-compose -f docker-compose.yml up
+# sudo docker exec -it onmybeamer_beamer_1 /bin/bash
+# jupyter lab --notebook-dir=./repo/ --ip=0.0.0.0 --port=9989  --no-browser --allow-root
