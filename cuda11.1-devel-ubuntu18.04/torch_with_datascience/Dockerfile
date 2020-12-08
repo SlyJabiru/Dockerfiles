@@ -1,4 +1,5 @@
-FROM nvidia/cuda:11.1-devel-ubuntu18.04
+FROM nvidia/cuda:11.1-cudnn8-devel-ubuntu18.04
+
 
 ARG PYTHON_VERSION=3.8
 ARG WITH_TORCHVISION=1
@@ -37,6 +38,8 @@ RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest
 
 ARG CUDATOOLKIT_VERSION=11.0
 ENV CONDA_OVERRIDE_CUDA=11.0
+# It would be better if this cudatoolkit version matches with nvidia cuda version
+# In this file, nvidia cuda version: 11.1, but conda cudatoolkit version: 11.0, cause conda cudatoolkit does not support 11.1 yet
 RUN /opt/conda/bin/conda install -y pytorch torchvision torchaudio cudatoolkit=$CUDATOOLKIT_VERSION -c pytorch && \
     /opt/conda/bin/conda clean -ya
 RUN /opt/conda/bin/pip install torchelastic
@@ -92,6 +95,10 @@ RUN cd ~/xgboost/python-package && \
     apt-get install -y python-setuptools && \
     python3 setup.py install && \
     python3 setup.py develop --user
+# RUN /opt/conda/bin/conda install -y -c conda-forge 'fsspec>=0.3.3' && \
+#     /opt/conda/bin/conda install -y dask
+#     # /opt/conda/bin/conda install -y -c rapidsai dask-cuda
+#     # dask-cuda does not support cuda11 yet
 ENV PYTHONPATH ~/xgboost/python-package:$PYTHONPATH
 
 
@@ -111,7 +118,8 @@ ENV PYTHONPATH ~/LightGBM/python-package:$PYTHONPATH
 
 
 # Install Jupyter
-RUN /opt/conda/bin/conda install -y -c conda-forge jupyterlab nodejs  && \
+RUN /opt/conda/bin/conda install -y -c conda-forge jupyterlab  && \
+    /opt/conda/bin/conda install -y -c conda-forge nodejs=10.13.0 && \
     /opt/conda/bin/conda install -y -c conda-forge  jupyter_http_over_ws  && \
     /opt/conda/bin/conda clean -ya
 
@@ -120,13 +128,18 @@ RUN /opt/conda/bin/conda install -y -c anaconda nbformat && \
     /opt/conda/bin/conda clean -ya
 RUN jupyter serverextension enable --py jupyter_http_over_ws
 
+RUN jupyter labextension install @oriolmirosa/jupyterlab_materialdarker && \
+    jupyter labextension install @arbennett/base16-monokai && \
+    jupyter labextension install @arbennett/base16-one-dark && \
+    jupyter labextension install @telamonian/theme-darcula
+
 
 EXPOSE 9989
 
 RUN python3 -m ipykernel.kernelspec
 
-# sudo docker run -it --gpus all -p 9989:9989 -v ~/catholic_prototype/:/app/repo onmybeamer_torch:0.6 /bin/bash
-# sudo docker run -it -p 9989:9989 -v ~/catholic_prototype/:/app/repo onmybeamer_torch:0.6 /bin/bash
+# sudo docker run -it --gpus all -p 9989:9989 -v ~/path/to/folder/:/app/repo onmybeamer_torch:0.7 /bin/bash
+# sudo docker run -it -p 9989:9989 -v ~/path/to/folder/:/app/repo onmybeamer_torch:0.7 /bin/bash
 
 # CMD ["bash", "-c", "jupyter lab --notebook-dir=./repo/ --ip=0.0.0.0 --port=9989  --no-browser --allow-root"]
 
