@@ -26,10 +26,3 @@
 * xgboost with gpu support
 * lightgbm with gpu support
 * jupyter lab
-
-### For now, I can't run multi-gpu pytorch training with this dockerfile
-### More environment variable should be handled
-## However, I can use single GPU properly now with this dockerfile!
-
-
-#### Multi GPU Training Reference: https://pytorch.org/tutorials/beginner/blitz/data_parallel_tutorial.html
