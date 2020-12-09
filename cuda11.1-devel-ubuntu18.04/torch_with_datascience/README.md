@@ -1,5 +1,17 @@
 # Torch With Datascience
 
+## Requirement
+* docker
+* docker-compose
+* nvidia-docker (to use GPU)
+
+## Usage
+```
+sudo docker build --tag ${your_image_name}:${tag} -f Dockerfile .
+sudo docker-compose -f docker-compose.yml up
+```
+And then run multi_gpu_examples.ipynb !
+
 ## config
 * Base = nvidia/cuda:11.1-devel-ubuntu18.04
 * Target GPU = RTX 3090
