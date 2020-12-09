@@ -16,7 +16,7 @@ And then run multi_gpu_examples.ipynb !
 * Base = nvidia/cuda:11.1-devel-ubuntu18.04
 * Target GPU = RTX 3090
 * Python = 3.8
-* Base Dependence Manager = Conda
+* Base Dependency Manager = conda
 
 ## Arguments
 * PYTHON_VERSION=3.8
