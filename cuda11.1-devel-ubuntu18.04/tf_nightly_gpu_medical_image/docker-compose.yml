@@ -19,3 +19,4 @@ services:
     tty: true
 
 # sudo docker-compose -f docker-compose.yml up
+# tensorboard --logdir=/app/repo/tensorboard_lo/train_data --port=9977 --host=0.0.0.0
