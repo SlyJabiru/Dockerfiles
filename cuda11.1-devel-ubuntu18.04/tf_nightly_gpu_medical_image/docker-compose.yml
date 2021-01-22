@@ -1,0 +1,21 @@
+version: '2.3'
+
+services:
+  ct:
+    image: image_name:0.1
+    runtime: nvidia
+    ports:
+     - "port1:port1"
+     - "port2:port2" # for tensorboard or other
+    volumes:
+     - ~/path/to/workspace/:/app/repo/
+     - /another/path/to/data/:/app/repo/data/
+    command: jupyter lab --notebook-dir=./repo/ --ip=0.0.0.0 --port=port1  --no-browser --allow-root
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0,1,2
+    shm_size: '32gb'
+    # environment: # or I could do this
+    #   - NVIDIA_VISIBLE_DEVICES=0
+    tty: true
+
+# sudo docker-compose -f docker-compose.yml up
