@@ -1,0 +1,111 @@
+FROM nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
+
+ARG PYTHON_VERSION=3.8
+ARG WITH_TORCHVISION=1
+ARG USER_ID
+ARG GROUP_ID
+
+# https://github.com/NVIDIA/nvidia-docker/issues/1632
+RUN rm /etc/apt/sources.list.d/cuda.list
+RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+
+# Install necessary building tools and dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    sudo \
+    bzip2 \
+    vim \
+    wget \
+    libssl-dev \
+    libx11-6 \
+    ca-certificates \
+    libglew-dev \
+    libjpeg-dev \
+    libosmesa6-dev \
+    libgl1-mesa-dev \
+    libgl1-mesa-glx \
+    libglfw3 \
+    libglew2.0 \
+    libglib2.0-0 \
+    libpng-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -o /usr/local/bin/patchelf https://s3-us-west-2.amazonaws.com/openai-sci-artifacts/manual-builds/patchelf_0.9_amd64.elf \
+    && chmod +x /usr/local/bin/patchelf
+
+ENV LANG C.UTF-8
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+
+# TODO: If mujoco-py does not work, uncomment these lines
+# WORKDIR /root/
+# RUN git clone https://github.com/openai/mujoco-py.git
+# WORKDIR /root/mujoco-py/
+# COPY vendor/Xdummy /usr/local/bin/Xdummy
+# RUN chmod +x /usr/local/bin/Xdummy
+# COPY ./vendor/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
+# Add user
+RUN mkdir /app
+RUN addgroup --gid $GROUP_ID lsj_docker
+RUN adduser --home /app/repo  --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID lsj_docker
+RUN chown -R lsj_docker:lsj_docker /app
+
+RUN mkdir /opt/conda
+RUN chown -R lsj_docker:lsj_docker /opt/conda
+
+# Switch to 'lsj_docker'
+USER lsj_docker
+
+# Install conda
+RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    chmod +x ~/miniconda.sh
+RUN ~/miniconda.sh -b -u -p /opt/conda && \
+    rm ~/miniconda.sh
+ENV PATH /opt/conda/bin:$PATH
+
+# Install python numpy typing
+RUN /opt/conda/bin/conda install -y python=$PYTHON_VERSION numpy typing && \
+    /opt/conda/bin/conda clean -ya
+
+# Install torch
+# https://github.com/anibali/docker-pytorch/blob/master/dockerfiles/1.7.0-cuda11.0-ubuntu20.04/Dockerfile
+ARG CUDATOOLKIT_VERSION=11.0
+ENV CONDA_OVERRIDE_CUDA=11.0
+RUN /opt/conda/bin/conda install -y -c pytorch \
+    cudatoolkit=11.0.221 \
+    "pytorch=1.7.0=py3.8_cuda11.0.221_cudnn8.0.3_0" \
+    "torchvision=0.8.1=py38_cu110" \
+ && /opt/conda/bin/conda clean -ya
+
+# Install RL benchmarks
+RUN conda install -c conda-forge gym && \
+    /opt/conda/bin/conda clean -ya
+RUN /opt/conda/bin/pip install --upgrade pip
+RUN /opt/conda/bin/pip install --no-cache-dir 'mujoco-py<2.2,>=2.1' dm_control procgen
+# RUN chmod -R 777 /opt/conda/lib/python3.8/site-packages/mujoco_py/
+
+# https://github.com/deepmind/dm_control#rendering
+# ENV MUJOCO_GL glfw
+ENV MUJOCO_GL egl
+
+# Install visualization and logging tools
+RUN /opt/conda/bin/conda install -y -c conda-forge matplotlib tensorboard wandb && \
+    /opt/conda/bin/conda clean -ya
+
+RUN mkdir -p /app/.mujoco \
+    && wget https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz -O /app/mujoco.tar.gz
+RUN tar -xf /app/mujoco.tar.gz -C /app/.mujoco \
+    && rm /app/mujoco.tar.gz
+
+# ENV LD_LIBRARY_PATH /usr/local/cuda/lib64:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /app/.mujoco/mujoco210/bin:${LD_LIBRARY_PATH}
+ENV MUJOCO_PY_MUJOCO_PATH /app/.mujoco/mujoco210
+WORKDIR /app/repo/
+
+
+# docker build -t myimage:version \
+# --build-arg USER_ID=$(id -u) \
+# --build-arg GROUP_ID=$(id -g) .
