@@ -1,0 +1,36 @@
+version: '3.8'
+
+# TODO: https://support.hyperglance.com/knowledge/changing-the-default-docker-subnet
+networks:
+  lsj_network:
+    name: lsj_network
+    external: true
+
+services:
+  lsj:
+    container_name: lsj_drqv2
+    image: lsj/drqv2:0.1
+    volumes:
+        - /path/to/host/dir:/path/to/container/dir
+    # command: python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count()); import gym; print(gym.make('procgen:procgen-coinrun-v0')); from procgen import ProcgenGym3Env; print(); import mujoco_py;"
+    command: /bin/bash
+    security_opt:
+        - "no-new-privileges:true"
+    # read_only: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+            # - driver: nvidia
+            #   device_ids: ['0', '3']
+            #   capabilities: [gpu]
+    # cpus: '32'
+    # memory: '64g'
+    networks:
+      lsj_network:
+    shm_size: '64gb'
+    tty: true
+
+# docker-compose up && docker-compose down
+# docker exec -it drqv2_lsj_1 /bin/bash
