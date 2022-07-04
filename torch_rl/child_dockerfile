@@ -1,0 +1,5 @@
+FROM lsj/torch_rl:0.7
+
+# Create the environment:
+COPY conda_env.yml .
+RUN /opt/conda/bin/conda env update --name base --file conda_env.yml
