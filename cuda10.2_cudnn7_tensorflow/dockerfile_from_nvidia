@@ -1,0 +1,105 @@
+FROM nvidia/cuda:10.2-cudnn7-runtime-ubuntu18.04
+
+# https://github.com/NVIDIA/nvidia-docker/issues/1632
+RUN rm /etc/apt/sources.list.d/*.list
+
+# Install necessary building tools and dependencies.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    software-properties-common \
+    sudo \
+    git \
+    curl \
+    bzip2 \
+    vim \
+    wget \
+    libssl-dev \
+    libx11-6 \
+    ca-certificates \
+    libglew-dev \
+    libjpeg-dev \
+    libosmesa6-dev \
+    libgl1-mesa-dev \
+    libgl1-mesa-glx \
+    libglfw3 \
+    libglew2.0 \
+    libglib2.0-0 \
+    libpng-dev \
+    rar \
+    unrar \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
+RUN apt-get update -y
+RUN apt-get install -y binutils
+RUN apt-get install --only-upgrade -y libstdc++6
+
+RUN apt-get update && apt-get -y dist-upgrade && apt-get purge -y libboost-all-dev && \
+    apt-get install -f -y libboost-all-dev && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# # Install TensorRT if not building for PowerPC
+# RUN [[ "${ARCH}" = "ppc64le" ]] || { apt-get update && \
+#         apt-get install -y --no-install-recommends libnvinfer${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA} \
+#         libnvinfer-plugin${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA} \
+#         && apt-get clean \
+#         && rm -rf /var/lib/apt/lists/*; }
+
+# Install TensorRT if not building for PowerPC
+# RUN [[ "${ARCH}" = "ppc64le" ]] || { apt-get update && \
+#         apt-get install -y --no-install-recommends libnvinfer \
+#         libnvinfer-plugin \
+#         && apt-get clean \
+#         && rm -rf /var/lib/apt/lists/*; }
+
+RUN curl -o /usr/local/bin/patchelf https://s3-us-west-2.amazonaws.com/openai-sci-artifacts/manual-builds/patchelf_0.9_amd64.elf \
+    && chmod +x /usr/local/bin/patchelf
+
+ENV LANG C.UTF-8
+ENV LD_LIBRARY_PATH /usr/local/nvidia/lib64:${LD_LIBRARY_PATH}
+ENV LD_LIBRARY_PATH /usr/local/cuda/extras/CUPTI/lib64:/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+# RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1 \
+#     && echo "/usr/local/cuda/lib64/stubs" > /etc/ld.so.conf.d/z-cuda-stubs.conf \
+#     && ldconfig
+
+
+# Install conda
+RUN curl -o ~/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    chmod +x ~/miniconda.sh
+RUN ~/miniconda.sh -b -u -p /opt/conda && \
+    rm ~/miniconda.sh
+ENV PATH /opt/conda/bin:$PATH
+
+
+RUN conda install -y -c defaults -c conda-forge python=3.8 pip
+RUN pip install --upgrade pip
+
+# TODO: Check whether tensorflow version is compatible with cuda version
+# https://www.tensorflow.org/install/source#gpu
+RUN pip install --no-cache-dir tensorflow==2.3.0
+RUN pip install --no-cache-dir numpy tqdm pandas
+RUN pip install --no-cache-dir matplotlib seaborn
+RUN pip install --no-cache-dir notebook ipython ipywidgets
+RUN pip install --no-cache-dir wandb
+RUN pip install --no-cache-dir pyvirtualdisplay livelossplot
+RUN pip install --no-cache-dir gym==0.23.1
+
+# Make link to libcusolver.so.10, since it's required when registering GPU devices
+# RUN ln /usr/local/cuda/lib64/libcusolver.so.11 /usr/local/cuda/lib64/libcusolver.so.10
+
+# TODO: If existing libcudart library version is different
+# Then find existing file using find / -name "libcudart.so.*"
+# Then make a symbolic link.
+# And add that to the LD_LIBRARY_PATH
+RUN ln -s /usr/local/cuda-10.2/targets/x86_64-linux/lib/libcudart.so.10.2.89 /usr/local/cuda-10.2/targets/x86_64-linux/lib/libcudart.so.10.1 
+ENV LD_LIBRARY_PATH /usr/local/cuda-10.2/targets/x86_64-linux/lib/:$LD_LIBRARY_PATH
+
+
+# CMD ["bash" "-c" "jupyter notebook --notebook-dir=/tf --ip 0.0.0.0 --no-browser --allow-root"]
+
+# docker run --gpus all --rm -it -p 8282:8888 --workdir=/home --name lsj_test sjlee1218/rl-tensorflow:0.1
+# jupyter notebook --notebook-dir=. --ip=0.0.0.0 --no-browser --allow-root
+# docker build -t sjlee1218/rl-tensorflow:0.1 .
+# docker push sjlee1218/rl-tensorflow:0.1
