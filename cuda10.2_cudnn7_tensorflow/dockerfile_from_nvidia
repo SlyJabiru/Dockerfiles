@@ -25,11 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglew2.0 \
     libglib2.0-0 \
     libpng-dev \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    xvfb \
+    python-opengl \
     rar \
     unrar \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
 
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
 RUN apt-get update -y
@@ -39,20 +43,6 @@ RUN apt-get install --only-upgrade -y libstdc++6
 RUN apt-get update && apt-get -y dist-upgrade && apt-get purge -y libboost-all-dev && \
     apt-get install -f -y libboost-all-dev && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# # Install TensorRT if not building for PowerPC
-# RUN [[ "${ARCH}" = "ppc64le" ]] || { apt-get update && \
-#         apt-get install -y --no-install-recommends libnvinfer${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA} \
-#         libnvinfer-plugin${LIBNVINFER_MAJOR_VERSION}=${LIBNVINFER}+cuda${CUDA} \
-#         && apt-get clean \
-#         && rm -rf /var/lib/apt/lists/*; }
-
-# Install TensorRT if not building for PowerPC
-# RUN [[ "${ARCH}" = "ppc64le" ]] || { apt-get update && \
-#         apt-get install -y --no-install-recommends libnvinfer \
-#         libnvinfer-plugin \
-#         && apt-get clean \
-#         && rm -rf /var/lib/apt/lists/*; }
 
 RUN curl -o /usr/local/bin/patchelf https://s3-us-west-2.amazonaws.com/openai-sci-artifacts/manual-builds/patchelf_0.9_amd64.elf \
     && chmod +x /usr/local/bin/patchelf
@@ -73,21 +63,32 @@ RUN ~/miniconda.sh -b -u -p /opt/conda && \
 ENV PATH /opt/conda/bin:$PATH
 
 
-RUN conda install -y -c defaults -c conda-forge python=3.8 pip
+RUN conda install -y -c defaults -c conda-forge python=3.7 pip
 RUN pip install --upgrade pip
+RUN pip install --upgrade setuptools
 
 # TODO: Check whether tensorflow version is compatible with cuda version
 # https://www.tensorflow.org/install/source#gpu
-RUN pip install --no-cache-dir tensorflow==2.3.0
-RUN pip install --no-cache-dir numpy tqdm pandas
+RUN pip install --no-cache-dir tensorflow==2.3.4
+RUN pip install --no-cache-dir tqdm pandas
 RUN pip install --no-cache-dir matplotlib seaborn
 RUN pip install --no-cache-dir notebook ipython ipywidgets
 RUN pip install --no-cache-dir wandb
 RUN pip install --no-cache-dir pyvirtualdisplay livelossplot
-RUN pip install --no-cache-dir gym==0.23.1
+RUN pip install --no-cache-dir opencv-python
+RUN pip install --no-cache-dir pyglet
+RUN pip install --no-cache-dir glob2
+RUN pip install --no-cache-dir pygame
+# RUN pip install --no-cache-dir gym[atari,accept-rom-license]==0.22.0
+RUN pip install --no-cache-dir gym[atari]==0.19.0
+RUN pip install --no-cache-dir numpy==1.18.5
+# RUN pip install --no-cache-dir gym[atari,accept-rom-license]==0.21.0
+# 0.19.0 Done correctly!
+# 0.20.0 -> Problem with gym atari at /opt/conda/lib/python3.7/site-packages/gym/envs/registration.py
+# 0.22.0 -> Problem at atari wrapper. self.unwrapped.np_random.randint
+# 0.23.1 -> Problem at atari wrapper. cannot import name 'Monitor' from 'gym.wrappers' 
+# 0.21.0 -> Problem at /opt/conda/lib/python3.7/site-packages/gym/envs/registration.py
 
-# Make link to libcusolver.so.10, since it's required when registering GPU devices
-# RUN ln /usr/local/cuda/lib64/libcusolver.so.11 /usr/local/cuda/lib64/libcusolver.so.10
 
 # TODO: If existing libcudart library version is different
 # Then find existing file using find / -name "libcudart.so.*"
@@ -96,10 +97,4 @@ RUN pip install --no-cache-dir gym==0.23.1
 RUN ln -s /usr/local/cuda-10.2/targets/x86_64-linux/lib/libcudart.so.10.2.89 /usr/local/cuda-10.2/targets/x86_64-linux/lib/libcudart.so.10.1 
 ENV LD_LIBRARY_PATH /usr/local/cuda-10.2/targets/x86_64-linux/lib/:$LD_LIBRARY_PATH
 
-
-# CMD ["bash" "-c" "jupyter notebook --notebook-dir=/tf --ip 0.0.0.0 --no-browser --allow-root"]
-
-# docker run --gpus all --rm -it -p 8282:8888 --workdir=/home --name lsj_test sjlee1218/rl-tensorflow:0.1
-# jupyter notebook --notebook-dir=. --ip=0.0.0.0 --no-browser --allow-root
-# docker build -t sjlee1218/rl-tensorflow:0.1 .
-# docker push sjlee1218/rl-tensorflow:0.1
+CMD ["/bin/bash", "-c", "jupyter notebook --notebook-dir=/tf --ip 0.0.0.0 --no-browser --allow-root"]
